@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E7A5A">
+<meta name="mobile-web-app-capable" content="yes">
+<title>赤字日記</title>
+<link rel="manifest" id="manifestLink">
+<link rel="icon" id="faviconLink">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Sora:wght@500;600;700&display=swap">
+<style>
+/* Layout: one-column phone app, sticky header, fixed bottom tab bar; ring dial is the hero of 今日 */
+:root{
+  --bg:#F3F6F2; --surface:#FFFFFF; --surface-2:#E8EEE7; --line:#D6DFD5;
+  --fg:#18231E; --muted:#5E6E66; --accent:#0E7A5A; --accent-soft:#D3EADF; --on-accent:#FFFFFF;
+  --warn:#C9721F; --warn-soft:#F6E3CD; --bad:#BE3F36; --star:#D79A1E;
+  --font-display:"Sora","Noto Sans TC",system-ui,sans-serif;
+  --font-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC",sans-serif;
+  --nav-h:64px; --r:14px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101613; --surface:#18201C; --surface-2:#222C27; --line:#2E3933;
+  --fg:#E6EEE9; --muted:#97A69E; --accent:#3FC395; --accent-soft:#1D3D31; --on-accent:#0B1410;
+  --warn:#E9A35A; --warn-soft:#3B2C1C; --bad:#EE7A70; --star:#F0BE4F; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.55;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+[hidden]{display:none!important}
+img{max-width:100%}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand img{width:34px;height:34px;border-radius:9px;flex:none}
+header.top h1{font-size:20px;font-weight:900;margin:0;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-home{display:flex;align-items:center;gap:6px;border:0;background:var(--accent);color:var(--on-accent);font:inherit;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer;flex:none}
+.btn-home svg{width:16px;height:16px}
+main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:4px calc(var(--nav-h) + 28px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
+section.view{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{font-size:15px;font-weight:700;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 small{font-weight:400;color:var(--muted);font-size:12px}
+.label{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.datebar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.datebar button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;cursor:pointer}
+.datebar button:disabled{opacity:.35;cursor:default}
+.datebar .d{flex:1;min-width:0;width:auto;height:auto;border-radius:10px;font-weight:700;text-align:center;border:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+.datebar .d small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.dial{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.ring{position:relative;width:148px;height:148px}
+.ring svg{width:148px;height:148px;transform:rotate(-90deg)}
+.ring .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring .big{font-size:30px;font-weight:700;line-height:1.1}
+.ring .cap{font-size:12px;color:var(--muted)}
+.facts{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fact{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.fact:last-child{border:0;padding-bottom:0}
+.fact span:first-child{color:var(--muted);font-size:13px}
+.fact b{font-family:var(--font-display);font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;align-self:flex-start}
+.pill.good{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.meal{display:flex;flex-direction:column}
+.meal+.meal{margin-top:8px}
+.meal-h{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:500;padding-bottom:2px}
+.item{display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:1px solid var(--surface-2);background:none;border-left:0;border-right:0;border-bottom:0;font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;border-radius:6px}
+.item:hover{background:var(--surface-2)}
+.item .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.item .nm small{display:block;color:var(--muted);font-size:12px}
+.item .kc{font-family:var(--font-display);font-variant-numeric:tabular-nums;font-weight:600;flex:none}
+.empty{color:var(--muted);font-size:14px;margin:0;padding:6px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 120px;min-width:0}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.field .lab{font-size:12px;color:var(--muted)}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid transparent;border-radius:10px;padding:10px 12px;width:100%;min-height:44px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.check input{width:20px;height:20px;min-height:0;accent-color:var(--accent)}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 16px;min-height:46px;cursor:pointer;background:var(--accent);color:var(--on-accent);text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.ghost{background:var(--surface-2);color:var(--fg)}
+.btn.danger{background:var(--surface-2);color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:500;padding:8px 2px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;flex:none}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip .num{color:var(--muted);margin-left:4px;font-size:12px}
+.chip[aria-pressed="true"] .num{color:inherit}
+.results{display:flex;flex-direction:column}
+.res{display:flex;align-items:center;gap:10px;padding:10px 4px;border-top:1px solid var(--surface-2);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;font:inherit;color:inherit;text-align:left;width:100%}
+.res:hover{background:var(--surface-2)}
+.res .nm{flex:1;min-width:0}
+.res .nm small{display:block;color:var(--muted);font-size:12px}
+.res .kc{font-family:var(--font-display);font-variant-numeric:tabular-nums;font-weight:600}
+.res .add{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;flex:none}
+.star{color:var(--star)}
+.more{align-self:center}
+.note{font-size:12px;color:var(--muted);margin:0}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpi{background:var(--surface);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font-size:24px;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:12px;color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--font-display);font-size:11px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);max-width:560px;margin:0 auto}
+nav.tabs a{height:var(--nav-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:500}
+nav.tabs a svg{width:24px;height:24px}
+nav.tabs a[aria-current="page"]{color:var(--accent);font-weight:700}
+.scrim{position:fixed;inset:0;background:rgba(8,14,11,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:20px max(20px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto}
+.sheet h3{margin:0;font-size:19px;overflow-wrap:anywhere}
+.sh-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.icon-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:20px;cursor:pointer;flex:none;display:grid;place-items:center}
+.icon-btn[aria-pressed="true"]{color:var(--star);border-color:var(--star)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:20px}
+.stepper button{width:48px;height:48px;border-radius:50%;border:0;background:var(--surface-2);color:var(--fg);font-size:24px;cursor:pointer}
+.stepper .q{font-size:34px;font-weight:700;min-width:90px;text-align:center}
+.stepper .q small{font-size:14px;color:var(--muted);font-family:var(--font-body);font-weight:500;margin-left:2px}
+.total{text-align:center;font-size:14px;color:var(--muted)}
+.total b{font-size:22px;color:var(--fg);font-family:var(--font-display)}
+.icon-preview{display:flex;align-items:center;gap:16px}
+.icon-preview canvas{width:88px;height:88px;border-radius:22px;box-shadow:0 2px 8px rgba(0,0,0,.15);flex:none}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--fg)}
+.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px}
+.glyph{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:22px;cursor:pointer;color:var(--fg)}
+.glyph[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.ring circle.prog{transition:stroke-dashoffset .5s ease}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><img id="brandIcon" alt=""><h1 id="appTitle">赤字日記</h1></div>
+  <button class="btn-home" id="homeBtn" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+    加到主畫面
+  </button>
+</header>
+
+<main>
+  <!-- 今日 -->
+  <section class="view" id="v-today">
+    <div class="datebar">
+      <button type="button" id="prevDay" aria-label="前一天">‹</button>
+      <button type="button" class="d" id="dateLabel" title="回到今天"></button>
+      <button type="button" id="nextDay" aria-label="後一天">›</button>
+    </div>
+    <div class="card">
+      <div class="dial">
+        <div class="ring">
+          <svg viewBox="0 0 148 148"><circle cx="74" cy="74" r="63" fill="none" stroke="var(--surface-2)" stroke-width="13"/><circle class="prog" id="ringProg" cx="74" cy="74" r="63" fill="none" stroke="var(--accent)" stroke-width="13" stroke-linecap="round" stroke-dasharray="395.8" stroke-dashoffset="395.8"/></svg>
+          <div class="center"><span class="cap" id="ringCap">還可以吃</span><span class="big num" id="ringBig">0</span><span class="cap">大卡</span></div>
+        </div>
+        <div class="facts">
+          <div class="fact"><span>每日消耗</span><b id="fTdee">0</b></div>
+          <div class="fact"><span>運動消耗</span><b id="fEx">0</b></div>
+          <div class="fact"><span>已攝取</span><b id="fEat">0</b></div>
+          <div class="fact"><span>目標攝取</span><b id="fBudget">0</b></div>
+        </div>
+      </div>
+      <span class="pill good" id="deficitPill">熱量赤字 0 大卡</span>
+    </div>
+    <div class="card">
+      <h2>飲食與運動 <small>點項目可修改</small></h2>
+      <div id="mealList"></div>
+      <div class="row">
+        <button class="btn ghost" type="button" id="copyYest" hidden>複製前一天飲食</button>
+        <a class="btn" href="#log">＋ 新增記錄</a>
+      </div>
+    </div>
+    <div class="card">
+      <h2>體重 <small>公斤</small></h2>
+      <div class="row">
+        <input id="wInput" type="number" inputmode="decimal" step="0.1" min="20" max="300" placeholder="例如 68.4" aria-label="體重（公斤）">
+        <button class="btn" id="wSave" type="button" style="flex:0 0 auto">儲存</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 記錄 -->
+  <section class="view" id="v-log" hidden>
+    <div class="card">
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="db" aria-pressed="true">食物清單</button>
+        <button type="button" data-mode="manual" aria-pressed="false">自訂食物</button>
+        <button type="button" data-mode="ex" aria-pressed="false">運動</button>
+      </div>
+      <p class="note" id="logDateNote"></p>
+
+      <div id="m-db" class="field" style="gap:12px">
+        <div id="recentBox" class="field" hidden><span class="lab">最近吃過</span><div class="chips" id="recentChips"></div></div>
+        <input id="foodSearch" type="search" placeholder="搜尋：滷肉飯、珍奶、雞胸肉…" aria-label="搜尋食物" autocomplete="off">
+        <div class="chips" id="catChips"></div>
+        <div class="results" id="foodResults"></div>
+        <button class="btn ghost more" id="moreBtn" type="button" hidden>顯示更多</button>
+        <p class="note" id="dbNote"></p>
+      </div>
+
+      <div id="m-manual" class="field" style="gap:12px" hidden>
+        <div class="field"><label for="mName">食物名稱</label><input id="mName" type="text" maxlength="40" placeholder="例如：公司下午茶蛋糕"></div>
+        <div class="row">
+          <div class="field"><label for="mPortion">份量（選填）</label><input id="mPortion" type="text" maxlength="20" placeholder="一片"></div>
+          <div class="field"><label for="mKcal">每份熱量（大卡）</label><input id="mKcal" type="number" inputmode="numeric" min="0" max="5000" placeholder="320"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="mSave" checked>存到「我的食物」，下次可直接選</label>
+        <button class="btn" id="mAdd" type="button">選擇份量並加入</button>
+        <p class="note">看包裝營養標示時，熱量 = 每份熱量 × 吃了幾份。</p>
+      </div>
+
+      <div id="m-ex" class="field" style="gap:12px" hidden>
+        <div class="field"><label for="exType">運動項目</label><select id="exType"></select></div>
+        <div class="field"><label for="exMin">時間（分鐘）</label><input id="exMin" type="number" inputmode="numeric" min="1" max="600" value="30"></div>
+        <p class="note" id="exPreview"></p>
+        <button class="btn" id="exAdd" type="button">加入運動</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 統計 -->
+  <section class="view" id="v-stats" hidden>
+    <div class="kpis">
+      <div class="kpi"><span>近 7 天累計赤字</span><b id="k7">0</b><span>大卡</span></div>
+      <div class="kpi"><span>約等於減去脂肪</span><b id="kKg">0</b><span>公斤（÷ 7700）</span></div>
+      <div class="kpi"><span>連續記錄</span><b id="kStreak">0</b><span>天</span></div>
+      <div class="kpi"><span>體重變化</span><b id="kW">–</b><span id="kWnote">公斤</span></div>
+    </div>
+    <div class="card">
+      <h2>每日熱量赤字 <small>近 7 天</small></h2>
+      <svg class="chart" id="barChart" viewBox="0 0 340 190" role="img" aria-label="近七天熱量赤字長條圖"></svg>
+      <p class="note">綠色是赤字（吃得比消耗少），橘色是超標。沒有記錄的日子不計算。</p>
+    </div>
+    <div class="card">
+      <h2>平均攝取 <small>近 7 天有記錄的日子</small></h2>
+      <div class="fact"><span>平均每日攝取</span><b id="avgEat">–</b></div>
+      <div class="fact"><span>平均每日赤字</span><b id="avgDef">–</b></div>
+      <div class="fact"><span>熱量最高的一餐</span><b id="topMeal">–</b></div>
+    </div>
+    <div class="card">
+      <h2>體重趨勢 <small>近 30 天</small></h2>
+      <svg class="chart" id="wChart" viewBox="0 0 340 170" role="img" aria-label="近三十天體重折線圖"></svg>
+    </div>
+  </section>
+
+  <!-- 我的 -->
+  <section class="view" id="v-me" hidden>
+    <div class="card">
+      <h2>基本資料 <small>用來計算每日消耗</small></h2>
+      <div class="field"><span class="lab">性別</span><div class="seg" id="sexSeg"><button type="button" data-v="m">男</button><button type="button" data-v="f">女</button></div></div>
+      <div class="row">
+        <div class="field"><label for="pAge">年齡</label><input id="pAge" type="number" inputmode="numeric" min="12" max="100"></div>
+        <div class="field"><label for="pH">身高（公分）</label><input id="pH" type="number" inputmode="decimal" min="100" max="230"></div>
+        <div class="field"><label for="pW">體重（公斤）</label><input id="pW" type="number" inputmode="decimal" min="30" max="300" step="0.1"></div>
+      </div>
+      <div class="field"><label for="pAct">平常活動量</label>
+        <select id="pAct">
+          <option value="1.2">久坐，幾乎不運動</option>
+          <option value="1.375">輕度，每週運動 1–3 天</option>
+          <option value="1.55">中度，每週運動 3–5 天</option>
+          <option value="1.725">高度，每週運動 6–7 天</option>
+        </select>
+      </div>
+      <div class="field"><span class="lab">每日目標赤字（大卡）</span><div class="seg" id="defSeg"><button type="button" data-v="300">300</button><button type="button" data-v="500">500</button><button type="button" data-v="750">750</button></div></div>
+      <div class="field"><label for="pGoal">目標體重（公斤，選填）</label><input id="pGoal" type="number" inputmode="decimal" step="0.1" min="30" max="300"></div>
+    </div>
+    <div class="card">
+      <h2>計算結果</h2>
+      <div class="fact"><span>基礎代謝 BMR</span><b id="rBmr">0</b></div>
+      <div class="fact"><span>每日消耗 TDEE</span><b id="rTdee">0</b></div>
+      <div class="fact"><span>建議每日攝取</span><b id="rTarget">0</b></div>
+      <div class="fact"><span>BMI</span><b id="rBmi">0</b></div>
+      <div class="fact"><span>到目標體重預估</span><b id="rGoal">–</b></div>
+      <div class="warnbox" id="rWarn" hidden></div>
+      <p class="note">BMR 使用 Mifflin-St Jeor 公式。每週減 0.5 公斤約需每日赤字 500 大卡。</p>
+    </div>
+
+    <div class="card">
+      <h2>App 圖示與名稱</h2>
+      <div class="icon-preview">
+        <canvas id="iconPreview" width="176" height="176" aria-label="圖示預覽"></canvas>
+        <div class="field" style="flex:1"><label for="appName">主畫面名稱</label><input id="appName" type="text" maxlength="12"></div>
+      </div>
+      <div class="field"><span class="lab">圖案</span><div class="glyphs" id="glyphs"></div></div>
+      <div class="field"><label for="customGlyph">或輸入任一個表情符號／文字</label><input id="customGlyph" type="text" maxlength="4" placeholder="例如 🐷 或 瘦"></div>
+      <div class="field"><span class="lab">背景顏色</span><div class="swatches" id="swatches"></div></div>
+      <div class="row">
+        <label class="btn ghost" style="cursor:pointer">上傳自己的圖片<input id="iconUpload" type="file" accept="image/*" hidden></label>
+        <button class="btn" id="iconSave" type="button">套用圖示</button>
+      </div>
+      <p class="note">請在「加到主畫面」之前設定好。已加入主畫面後再更改，需要先移除主畫面上的圖示再重新加入。</p>
+    </div>
+
+    <div class="card">
+      <h2>資料備份</h2>
+      <p class="note">記錄只存在這支手機的瀏覽器裡。換手機或清除瀏覽器資料前，請先匯出備份。</p>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn" type="button">匯出備份</button>
+        <label class="btn ghost" style="cursor:pointer">匯入備份<input id="importFile" type="file" accept="application/json,.json" hidden></label>
+      </div>
+      <button class="btn danger" id="clearBtn" type="button">清除所有記錄</button>
+      <div id="clearConfirm" class="row" hidden>
+        <span class="note" style="flex-basis:100%">確定要刪除所有飲食、運動和體重記錄？基本資料和我的食物會保留。</span>
+        <button class="btn ghost" id="clearNo" type="button">取消</button>
+        <button class="btn" id="clearYes" type="button" style="background:var(--bad)">刪除</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="主選單"><div class="in">
+  <a href="#today" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 8 8"/></svg>今日</a>
+  <a href="#log" data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>記錄</a>
+  <a href="#stats" data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg>統計</a>
+  <a href="#me" data-tab="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>我的</a>
+</div></nav>
+
+<!-- 份量 / 編輯 sheet -->
+<div class="scrim" id="foodSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="fsName">
+    <div class="sh-head">
+      <div style="min-width:0"><h3 id="fsName"></h3><p class="note" id="fsPortion"></p></div>
+      <button class="icon-btn" id="fsStar" type="button" aria-pressed="false" aria-label="加入常用">☆</button>
+    </div>
+    <div class="stepper">
+      <button type="button" id="fsMinus" aria-label="減少份量">−</button>
+      <div class="q num" id="fsQty">1<small>份</small></div>
+      <button type="button" id="fsPlus" aria-label="增加份量">＋</button>
+    </div>
+    <div class="chips wrap" id="fsQuick" style="justify-content:center"></div>
+    <div class="total">共 <b id="fsTotal">0</b> 大卡</div>
+    <div class="seg" id="fsMeal"></div>
+    <div class="row">
+      <button class="btn danger" id="fsDelete" type="button" hidden>刪除</button>
+      <button class="btn ghost" id="fsCancel" type="button">取消</button>
+      <button class="btn" id="fsOk" type="button">加入</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+"use strict";
+// ---------- 食物資料（每份熱量，大卡；一般份量估計值） ----------
+const RAW=`
+#主食
+白飯|一碗 200g|280
+白飯|半碗 100g|140
+糙米飯|一碗 200g|260
+五穀飯|一碗 200g|270
+白粥|一碗|150
+地瓜粥|一碗|180
+地瓜|中型 150g|200
+馬鈴薯|中型 150g|115
+玉米|一根|150
+南瓜|100g|70
+芋頭|100g|130
+饅頭|一個|280
+全麥饅頭|一個|250
+吐司|一片|130
+全麥吐司|一片|110
+貝果|一個|280
+可頌|一個|230
+法國麵包|一段 60g|160
+燕麥片|30g|115
+冬粉|一把 40g|140
+#飯類便當
+排骨便當|一個|850
+雞腿便當|一個|900
+控肉便當|一個|950
+魚排便當|一個|750
+燒肉便當|一個|800
+三寶飯|一份|900
+自助餐（一葷三素）|一份|650
+滷肉飯|小碗|400
+滷肉飯|大碗|600
+雞肉飯|小碗|380
+爌肉飯|一碗|750
+豬腳飯|一份|900
+蛋炒飯|一盤|650
+蝦仁炒飯|一盤|680
+咖哩雞肉飯|一盤|750
+咖哩豬排飯|一盤|850
+燴飯|一盤|700
+油飯|一碗|450
+筒仔米糕|一個|400
+肉粽|一顆|550
+傳統飯糰|一個|500
+牛丼|一碗|750
+親子丼|一碗|700
+#麵食
+陽春麵|一碗|350
+紅燒牛肉麵|一碗|650
+清燉牛肉麵|一碗|550
+麻醬乾麵|一碗|500
+炸醬麵|一碗|600
+擔仔麵|小碗|300
+大腸麵線|一碗|400
+鍋燒意麵|一碗|550
+炒麵|一盤|650
+炒米粉|一盤|550
+米苔目|一碗|300
+涼麵|一盒|450
+豚骨拉麵|一碗|800
+烏龍麵|一碗|450
+泡麵|一包|450
+水餃|10 顆|500
+鍋貼|10 顆|600
+小籠包|10 顆|550
+餛飩湯|一碗|350
+酸辣湯餃|一碗|450
+#早餐
+原味蛋餅|一份|270
+起司蛋餅|一份|350
+培根蛋餅|一份|380
+蘿蔔糕|兩片|250
+火腿蛋三明治|一份|320
+鮪魚三明治|一份|350
+肉鬆蛋三明治|一份|380
+豬肉蛋漢堡|一個|450
+鐵板麵|一份|550
+燒餅油條|一套|500
+早餐店飯糰|一個|500
+蔥抓餅加蛋|一份|450
+花生厚片吐司|一片|350
+法式吐司|一份|400
+薯餅|一片|150
+熱狗|一根|150
+早餐店奶茶|中杯|200
+米漿|中杯|300
+含糖豆漿|中杯|220
+#夜市小吃
+肉圓|一顆|350
+蚵仔煎|一份|500
+炸雞排|一片|650
+鹽酥雞|一份 200g|600
+炸臭豆腐|一份|450
+麻辣臭豆腐|一碗|350
+大腸包小腸|一份|550
+胡椒餅|一個|450
+蔥油餅|一片|350
+地瓜球|一份|350
+雞蛋糕|10 個|300
+紅豆車輪餅|一個|200
+章魚燒|6 顆|350
+甜不辣|一份|350
+碗粿|一碗|350
+蚵仔麵線|一碗|400
+潤餅|一捲|400
+割包|一個|400
+生煎包|一個|180
+水煎包|一個|200
+烤玉米|一根|300
+烤香腸|一根|280
+滷蛋|一顆|90
+豬血糕|一支|250
+蝦捲|一份|350
+滷豆干|一塊|80
+#火鍋滷味
+麻辣鍋|一人份|1100
+涮涮鍋|一人份|800
+石頭火鍋|一人份|900
+薑母鴨|一人份|900
+羊肉爐|一人份|850
+滷味|一份|400
+麻辣燙|一碗|600
+鹹水雞|一份|350
+燒肉吃到飽|一人|1500
+沙茶醬|一匙|90
+#肉蛋豆
+水煮蛋|一顆|75
+茶葉蛋|一顆|75
+荷包蛋|一顆|110
+炒蛋|兩顆|200
+雞胸肉|100g|165
+舒肥雞胸|一包 100g|120
+雞腿（去皮）|一隻|200
+雞腿（帶皮）|一隻|300
+豬里肌|100g|190
+五花肉|100g|390
+牛腱|100g|150
+牛小排|100g|380
+牛排|200g|500
+鮭魚|100g|210
+鯖魚|100g|300
+鯛魚片|100g|110
+水煮鮪魚罐頭|一罐|100
+蝦仁|100g|90
+花枝|100g|80
+板豆腐|100g|90
+嫩豆腐|一盒|150
+毛豆|100g|130
+無糖豆漿|400ml|140
+希臘優格|100g|100
+起司片|一片|60
+乳清蛋白|一匙|120
+#蔬菜湯品
+燙青菜|一份含醬|80
+炒青菜|一盤|150
+燙地瓜葉|一份|60
+炒高麗菜|一盤|150
+燙花椰菜|100g|35
+番茄|一顆|30
+小黃瓜|一根|20
+生菜沙拉（無醬）|一碗|50
+凱撒醬|一包|150
+和風醬|一包|50
+千島醬|一包|130
+玉米濃湯|一碗|200
+味噌湯|一碗|60
+紫菜蛋花湯|一碗|60
+酸辣湯|一碗|150
+泡菜|一小碟|20
+#水果
+香蕉|一根|100
+蘋果|一顆|120
+芭樂|一顆|80
+奇異果|一顆|50
+葡萄|10 顆|60
+西瓜|一片 250g|80
+木瓜|一碗|70
+芒果|一顆|200
+鳳梨|一碗|80
+柳丁|一顆|60
+橘子|一顆|50
+草莓|10 顆|50
+藍莓|一盒 125g|70
+蓮霧|一顆|30
+火龍果|半顆|80
+荔枝|10 顆|120
+釋迦|一顆|250
+酪梨|半顆|160
+水梨|一顆|150
+櫻桃|10 顆|50
+#飲料
+無糖綠茶|一杯|0
+無糖紅茶|一杯|0
+美式咖啡|一杯|10
+拿鐵|中杯|190
+拿鐵|大杯|250
+燕麥拿鐵|大杯|230
+卡布奇諾|中杯|130
+焦糖瑪奇朵|大杯|250
+鮮奶|240ml|150
+低脂鮮奶|240ml|110
+保久乳|一瓶|180
+可樂|330ml|140
+可樂|600ml|250
+零卡可樂|一瓶|0
+汽水|330ml|140
+運動飲料|600ml|150
+柳橙汁|300ml|140
+啤酒|330ml|140
+紅酒|一杯 150ml|125
+高粱|一杯 50ml|150
+養樂多|一瓶|70
+優酪乳|一瓶|200
+椰子水|一瓶|60
+#手搖飲
+珍珠奶茶（全糖）|700ml|650
+珍珠奶茶（半糖）|700ml|500
+珍珠奶茶（微糖）|700ml|450
+珍珠鮮奶茶（半糖）|700ml|550
+奶茶（半糖）|700ml|350
+鮮奶茶（無糖）|700ml|250
+紅茶拿鐵（半糖）|700ml|380
+多多綠（半糖）|700ml|300
+檸檬綠（半糖）|700ml|220
+百香綠（半糖）|700ml|250
+冬瓜茶|700ml|250
+黑糖珍珠鮮奶|700ml|600
+芋頭鮮奶|700ml|500
+四季春（微糖）|700ml|100
+加珍珠|一份|150
+加椰果|一份|100
+加布丁|一份|150
+#便利商店
+鮪魚御飯糰|一個|200
+肉鬆御飯糰|一個|210
+大亨堡|一個|350
+超商地瓜|一條|200
+關東煮（3 樣）|一份|200
+微波便當|一個|700
+超商沙拉（附醬）|一盒|250
+即食雞胸肉|一包|120
+超商義大利麵|一盒|600
+超商三明治|一份|300
+菠蘿麵包|一個|380
+肉鬆麵包|一個|350
+奶酥麵包|一個|400
+#甜點
+豆花|一碗|250
+剉冰|一碗|400
+芒果冰|一碗|600
+仙草凍|一碗|150
+愛玉|一碗|100
+紅豆湯|一碗|250
+湯圓|5 顆|300
+鳳梨酥|一塊|200
+蛋黃酥|一顆|300
+月餅|一個|500
+蛋塔|一個|220
+泡芙|一個|200
+起司蛋糕|一片|400
+巧克力蛋糕|一片|420
+布丁|一個|150
+冰淇淋|一球|150
+霜淇淋|一支|200
+甜甜圈|一個|250
+鬆餅|一份|500
+馬卡龍|一個|90
+提拉米蘇|一份|400
+麻糬|一個|120
+#零食
+洋芋片|一包 50g|270
+洋芋片|大包 100g|540
+綜合堅果|一把 30g|180
+花生|一把 30g|170
+餅乾|3 片|150
+蘇打餅|3 片|100
+巧克力|一片 20g|110
+軟糖|一包|300
+海苔|一包|30
+爆米花|中份|400
+蒟蒻果凍|一個|20
+牛肉乾|30g|100
+米果|2 片|60
+#速食
+大麥克|一個|550
+麥香雞|一個|380
+雙層吉事堡|一個|450
+勁辣雞腿堡|一個|500
+炸雞|一塊|300
+雞塊|6 塊|260
+薯條|中份|350
+薯條|大份|480
+蘋果派|一個|250
+披薩|一片|280
+潛艇堡|6 吋|400
+熱狗堡|一個|300
+#異國料理
+握壽司|一貫|50
+鮭魚生魚片|5 片|150
+花壽司|一條|300
+豬排定食|一份|900
+鰻魚飯|一份|800
+日式天婦羅|一份|400
+韓式拌飯|一碗|650
+部隊鍋|一人份|750
+韓式炸雞|半隻|1000
+辣炒年糕|一份|400
+打拋豬飯|一盤|700
+綠咖哩雞|一份|600
+越南河粉|一碗|450
+印度咖哩配烤餅|一份|900
+紅醬義大利麵|一盤|650
+白醬義大利麵|一盤|850
+青醬義大利麵|一盤|800
+漢堡排|一份|450
+焗烤飯|一盤|850
+燉飯|一盤|700
+墨西哥捲餅|一個|600`;
+const FOODS=[];let _c="";
+RAW.trim().split("\n").forEach(l=>{l=l.trim();if(!l)return;if(l[0]==="#"){_c=l.slice(1);return;}const [n,p,k]=l.split("|");FOODS.push({cat:_c,name:n,portion:p,kcal:+k});});
+const CATS=["全部","常用",...[...new Set(FOODS.map(f=>f.cat))]];
+const EXS=[["快走",4.3],["慢跑",8],["騎腳踏車",6],["飛輪",8.5],["重量訓練",5],["游泳",7],["瑜伽",2.5],["皮拉提斯",3],["跳繩",11],["爬樓梯",8],["打籃球",6.5],["羽球",5.5],["跳舞",5],["健走登山",6],["做家事",3]];
+const MEALS=[["b","早餐"],["l","午餐"],["d","晚餐"],["s","點心"]];
+const GLYPHS=["ring","🥗","🍎","🔥","⚖️","🏃","💪","🥑","🍱","🐷","🌱","⭐"];
+const COLORS=["#0E7A5A","#1F6FB2","#7A4FB8","#C2456A","#D9822B","#2E3A35","#E8EEE7"];
+
+// ---------- 狀態 ----------
+const LS="deficit-diary-v2";
+const DEF={profile:{sex:"f",age:30,h:160,w:62,act:1.375,def:500,goal:""},days:{},custom:[],favs:[],recent:[],icon:{glyph:"ring",color:"#0E7A5A",img:"",name:"赤字日記"}};
+let S=JSON.parse(JSON.stringify(DEF));
+function load(){try{const raw=localStorage.getItem(LS);if(raw){const p=JSON.parse(raw);if(p&&p.profile)S={...S,...p,icon:{...DEF.icon,...(p.icon||{})}};}}catch(e){}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){toast("儲存失敗：瀏覽器空間不足或封鎖了儲存");}}
+load();
+const key=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),dd=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${dd}`;};
+let cur=new Date();
+let cat="全部",mode="db",showN=40;
+const defaultMeal=()=>{const h=new Date().getHours();return h<10?"b":h<15?"l":h<20?"d":"s";};
+function day(k){if(!S.days[k])S.days[k]={foods:[],ex:[],weight:null};return S.days[k];}
+function cleanDay(k){const d=S.days[k];if(d&&!d.foods.length&&!d.ex.length&&d.weight==null)delete S.days[k];}
+const fid=f=>f.name+"|"+f.portion;
+
+// ---------- 計算 ----------
+function bmr(p){return Math.round(10*p.w+6.25*p.h-5*p.age+(p.sex==="m"?5:-161));}
+function weightOn(k){let best=null;for(const dk of Object.keys(S.days).sort()){if(dk>k)break;if(S.days[dk].weight)best=S.days[dk].weight;}return best;}
+function tdeeFor(k){const w=weightOn(k)||S.profile.w;return Math.round(bmr({...S.profile,w})*Number(S.profile.act));}
+const itemKcal=f=>Math.round(f.kcal*(f.qty||1));
+const sumF=a=>a.reduce((s,f)=>s+itemKcal(f),0);
+const sumE=a=>a.reduce((s,e)=>s+(+e.kcal||0),0);
+function minIntake(){return Math.max(bmr(S.profile),S.profile.sex==="m"?1500:1200);}
+function dayStats(k){const d=S.days[k]||{foods:[],ex:[]};const t=tdeeFor(k);const ex=sumE(d.ex);const eat=sumF(d.foods);
+  return{t,ex,eat,deficit:t+ex-eat,budget:Math.max(t-S.profile.def,minIntake())+ex,logged:d.foods.length>0};}
+const fmt=n=>Math.round(n).toLocaleString("zh-TW");
+const fq=q=>(+q).toString();
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+
+// ---------- 今日 ----------
+function renderToday(){
+  const k=key(cur),today=key(new Date());
+  const wd="日一二三四五六"[cur.getDay()];
+  const y=new Date();y.setDate(y.getDate()-1);
+  const rel=k===today?"今天":k===key(y)?"昨天":`${cur.getMonth()+1}月${cur.getDate()}日`;
+  $("dateLabel").innerHTML=`${rel}<small>${k.replace(/-/g,"/")}（週${wd}）</small>`;
+  $("nextDay").disabled=k>=today;
+  const st=dayStats(k),left=st.budget-st.eat;
+  $("fTdee").textContent=fmt(st.t);$("fEx").textContent=fmt(st.ex);$("fEat").textContent=fmt(st.eat);$("fBudget").textContent=fmt(st.budget);
+  $("ringBig").textContent=fmt(Math.abs(left));$("ringCap").textContent=left>=0?"還可以吃":"超過目標";
+  const frac=Math.min(st.eat/Math.max(st.budget,1),1);
+  const prog=$("ringProg");prog.style.strokeDashoffset=395.8*(1-frac);prog.setAttribute("stroke",left>=0?"var(--accent)":"var(--warn)");
+  const pill=$("deficitPill");
+  if(st.deficit>=0){pill.className="pill good";pill.textContent=`熱量赤字 ${fmt(st.deficit)} 大卡`;}
+  else{pill.className="pill warn";pill.textContent=`熱量盈餘 ${fmt(-st.deficit)} 大卡`;}
+  const d=S.days[k]||{foods:[],ex:[]};
+  let h="";
+  for(const [m,name] of MEALS){const items=d.foods.map((f,i)=>({f,i})).filter(x=>x.f.meal===m);if(!items.length)continue;
+    h+=`<div class="meal"><div class="meal-h"><span>${name}</span><span class="num">${fmt(items.reduce((s,x)=>s+itemKcal(x.f),0))}</span></div>`+
+    items.map(({f,i})=>`<button type="button" class="item" data-f="${i}"><div class="nm">${esc(f.name)}<small>${esc(f.portion||"")}${(f.qty||1)!==1?` × ${fq(f.qty)}`:""}</small></div><span class="kc">${fmt(itemKcal(f))}</span></button>`).join("")+`</div>`;}
+  if(d.ex.length){h+=`<div class="meal"><div class="meal-h"><span>運動</span><span class="num">−${fmt(sumE(d.ex))}</span></div>`+
+    d.ex.map((e,i)=>`<button type="button" class="item" data-e="${i}"><div class="nm">${esc(e.name)}<small>${e.min} 分鐘・點一下刪除</small></div><span class="kc" style="color:var(--accent)">−${fmt(e.kcal)}</span></button>`).join("")+`</div>`;}
+  $("mealList").innerHTML=h||`<p class="empty">這天還沒有記錄。點「新增記錄」加入第一筆。</p>`;
+  const prev=new Date(cur);prev.setDate(prev.getDate()-1);const pd=S.days[key(prev)];
+  $("copyYest").hidden=!(d.foods.length===0&&pd&&pd.foods.length);
+  $("wInput").value=(S.days[k]&&S.days[k].weight)||"";
+}
+let pendingDelEx=null;
+$("mealList").addEventListener("click",e=>{const b=e.target.closest(".item");if(!b)return;const k=key(cur),d=day(k);
+  if(b.dataset.f!=null){openSheet({edit:+b.dataset.f});return;}
+  const i=+b.dataset.e;
+  if(pendingDelEx===i){const r=d.ex.splice(i,1)[0];pendingDelEx=null;cleanDay(k);save();renderAll();toast(`已刪除運動：${r.name}`);}
+  else{pendingDelEx=i;toast("再點一次即可刪除這筆運動");setTimeout(()=>{pendingDelEx=null;},2500);}});
+$("prevDay").onclick=()=>{cur.setDate(cur.getDate()-1);renderAll();};
+$("nextDay").onclick=()=>{if(key(cur)<key(new Date())){cur.setDate(cur.getDate()+1);renderAll();}};
+$("dateLabel").onclick=()=>{cur=new Date();renderAll();};
+$("copyYest").onclick=()=>{const prev=new Date(cur);prev.setDate(prev.getDate()-1);const pd=S.days[key(prev)];if(!pd)return;const k=key(cur);
+  day(k).foods.push(...pd.foods.map(f=>({...f})));save();renderAll();toast(`已複製 ${pd.foods.length} 項食物，共 ${fmt(sumF(pd.foods))} 大卡`);};
+$("wSave").onclick=()=>{const v=parseFloat($("wInput").value);const k=key(cur);if(!(v>=20&&v<=300)){toast("請輸入 20 到 300 之間的體重");return;}
+  day(k).weight=Math.round(v*10)/10;const latest=Object.keys(S.days).sort().filter(x=>S.days[x].weight).pop();if(latest)S.profile.w=S.days[latest].weight;
+  save();renderAll();toast("體重已儲存");};
+
+// ---------- 份量 sheet ----------
+let sh=null; // {food, qty, meal, editIdx}
+function openSheet(o){
+  if(o.edit!=null){const f=S.days[key(cur)].foods[o.edit];sh={food:{name:f.name,portion:f.portion,kcal:f.kcal},qty:f.qty||1,meal:f.meal,editIdx:o.edit};}
+  else sh={food:o.food,qty:1,meal:defaultMeal(),editIdx:null};
+  $("fsName").textContent=sh.food.name;$("fsPortion").textContent=`${sh.food.portion||"一份"}・${fmt(sh.food.kcal)} 大卡`;
+  $("fsDelete").hidden=sh.editIdx==null;$("fsOk").textContent=sh.editIdx==null?"加入":"儲存";
+  drawSheet();$("foodSheet").hidden=false;$("fsOk").focus();
+}
+function drawSheet(){$("fsQty").innerHTML=`${fq(sh.qty)}<small>份</small>`;$("fsTotal").textContent=fmt(sh.food.kcal*sh.qty);
+  const fav=S.favs.includes(fid(sh.food));$("fsStar").setAttribute("aria-pressed",fav);$("fsStar").textContent=fav?"★":"☆";$("fsStar").setAttribute("aria-label",fav?"從常用移除":"加入常用");
+  $("fsQuick").innerHTML=[0.5,1,1.5,2,3].map(q=>`<button type="button" class="chip" data-q="${q}" aria-pressed="${q===sh.qty}">${q} 份</button>`).join("");
+  $("fsMeal").innerHTML=MEALS.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===sh.meal}">${l}</button>`).join("");}
+const closeSheet=()=>{$("foodSheet").hidden=true;sh=null;};
+$("fsMinus").onclick=()=>{sh.qty=Math.max(0.25,+(sh.qty-(sh.qty<=1?0.25:0.5)).toFixed(2));drawSheet();};
+$("fsPlus").onclick=()=>{sh.qty=Math.min(20,+(sh.qty+(sh.qty<1?0.25:0.5)).toFixed(2));drawSheet();};
+$("fsQuick").onclick=e=>{const b=e.target.closest("[data-q]");if(!b)return;sh.qty=+b.dataset.q;drawSheet();};
+$("fsMeal").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;sh.meal=b.dataset.v;drawSheet();};
+$("fsStar").onclick=()=>{const id=fid(sh.food);const i=S.favs.indexOf(id);if(i>=0)S.favs.splice(i,1);else{S.favs.unshift(id);if(!findFood(id))S.custom.unshift({...sh.food});}save();drawSheet();if(cat==="常用")renderResults();};
+$("fsCancel").onclick=closeSheet;
+$("foodSheet").onclick=e=>{if(e.target.id==="foodSheet")closeSheet();};
+$("fsDelete").onclick=()=>{const k=key(cur);const r=S.days[k].foods.splice(sh.editIdx,1)[0];cleanDay(k);save();closeSheet();renderAll();toast(`已刪除「${r.name}」`);};
+$("fsOk").onclick=()=>{const k=key(cur);const it={name:sh.food.name,portion:sh.food.portion||"",kcal:sh.food.kcal,qty:sh.qty,meal:sh.meal};
+  if(sh.editIdx!=null){day(k).foods[sh.editIdx]=it;toast("已更新");}
+  else{day(k).foods.push(it);const id=fid(sh.food);S.recent=[id,...S.recent.filter(x=>x!==id)].slice(0,10);
+    toast(`已加入${MEALS.find(m=>m[0]===sh.meal)[1]}：${sh.food.name} ${fmt(sh.food.kcal*sh.qty)} 大卡`);}
+  save();closeSheet();renderAll();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("foodSheet").hidden)closeSheet();});
+
+// ---------- 記錄 ----------
+function allFoods(){return[...S.custom.map(f=>({...f,cat:"我的食物"})),...FOODS];}
+function findFood(id){return allFoods().find(f=>fid(f)===id);}
+function renderRecent(){const list=S.recent.map(findFood).filter(Boolean).slice(0,8);$("recentBox").hidden=!list.length;
+  $("recentChips").innerHTML=list.map(f=>`<button type="button" class="chip" data-id="${esc(fid(f))}">${esc(f.name)}<span class="num">${fmt(f.kcal)}</span></button>`).join("");}
+$("recentChips").onclick=e=>{const b=e.target.closest("[data-id]");if(!b)return;const f=findFood(b.dataset.id);if(f)openSheet({food:f});};
+$("catChips").innerHTML=CATS.map(c=>`<button type="button" class="chip" data-c="${c}" aria-pressed="${c===cat}">${c==="常用"?"★ 常用":c}</button>`).join("");
+$("catChips").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;cat=b.dataset.c;showN=40;[...$("catChips").children].forEach(c=>c.setAttribute("aria-pressed",c===b));renderResults();};
+$("foodSearch").oninput=()=>{showN=40;renderResults();};
+let lastList=[];
+function renderResults(){
+  const q=$("foodSearch").value.trim().toLowerCase();
+  let list=allFoods();
+  if(cat==="常用")list=S.favs.map(findFood).filter(Boolean).concat(S.custom.filter(f=>!S.favs.includes(fid(f))));
+  else if(cat!=="全部")list=list.filter(f=>f.cat===cat);
+  if(q){const terms=q.split(/\s+/);list=list.filter(f=>{const s=(f.name+f.portion+(f.cat||"")).toLowerCase();return terms.every(t=>s.includes(t));});}
+  lastList=list;
+  const shown=list.slice(0,showN);
+  $("foodResults").innerHTML=shown.length?shown.map((f,i)=>`<button type="button" class="res" data-i="${i}"><div class="nm">${S.favs.includes(fid(f))?'<span class="star">★</span> ':""}${esc(f.name)}<small>${esc(f.portion||"一份")}${cat==="全部"&&f.cat?"・"+esc(f.cat):""}</small></div><span class="kc">${fmt(f.kcal)}</span><span class="add" aria-hidden="true">＋</span></button>`).join("")
+   :`<p class="empty">${cat==="常用"&&!q?"還沒有常用食物。加入食物時點 ☆ 就會出現在這裡。":`找不到「${esc(q)}」。可以到「自訂食物」自己新增。`}</p>`;
+  $("moreBtn").hidden=list.length<=showN;$("moreBtn").textContent=`顯示更多（還有 ${list.length-showN} 項）`;
+  $("dbNote").textContent=`共 ${FOODS.length} 種內建食物。熱量為一般份量的估計值，實際依店家與份量而不同。`;
+}
+$("moreBtn").onclick=()=>{showN+=60;renderResults();};
+$("foodResults").onclick=e=>{const b=e.target.closest(".res");if(!b)return;openSheet({food:lastList[+b.dataset.i]});};
+$("modeSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.mode;[...$("modeSeg").children].forEach(c=>c.setAttribute("aria-pressed",c===b));
+  ["db","manual","ex"].forEach(m=>$("m-"+m).hidden=m!==mode);exPrev();};
+$("mAdd").onclick=()=>{const n=$("mName").value.trim(),k=parseFloat($("mKcal").value),p=$("mPortion").value.trim()||"一份";
+  if(!n||!(k>=0&&k<=5000)){toast("請填寫食物名稱和 0 到 5000 的熱量");return;}
+  const food={name:n,portion:p,kcal:Math.round(k)};
+  if($("mSave").checked&&!S.custom.some(f=>fid(f)===fid(food))){S.custom.unshift(food);save();}
+  $("mName").value="";$("mKcal").value="";$("mPortion").value="";openSheet({food});};
+$("exType").innerHTML=EXS.map(([n],i)=>`<option value="${i}">${n}</option>`).join("");
+function exKcal(){const met=EXS[+$("exType").value][1];const min=parseFloat($("exMin").value)||0;const w=weightOn(key(cur))||S.profile.w;return Math.round(met*w*min/60);}
+function exPrev(){$("exPreview").textContent=`以體重 ${weightOn(key(cur))||S.profile.w} 公斤估算，約消耗 ${fmt(exKcal())} 大卡`;}
+$("exType").onchange=exPrev;$("exMin").oninput=exPrev;
+$("exAdd").onclick=()=>{const min=parseFloat($("exMin").value);if(!(min>0&&min<=600)){toast("請輸入 1 到 600 分鐘");return;}const k=key(cur);const name=EXS[+$("exType").value][0];
+  day(k).ex.push({name,min,kcal:exKcal()});save();renderAll();toast(`已加入運動：${name} ${min} 分鐘，−${fmt(exKcal())} 大卡`);};
+
+// ---------- 統計 ----------
+function renderStats(){
+  const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d);}
+  const vals=days.map(d=>{const k=key(d);const s=dayStats(k);return{d,k,v:s.logged?s.deficit:null,eat:s.eat};});
+  const logged=vals.filter(x=>x.v!=null);const tot=logged.reduce((s,x)=>s+x.v,0);
+  $("k7").textContent=fmt(tot);$("kKg").textContent=(tot/7700).toFixed(2);
+  let streak=0;const sd=new Date();if(!(S.days[key(sd)]&&S.days[key(sd)].foods.length))sd.setDate(sd.getDate()-1);
+  while(S.days[key(sd)]&&S.days[key(sd)].foods.length){streak++;sd.setDate(sd.getDate()-1);}
+  $("kStreak").textContent=streak;
+  const ws=Object.keys(S.days).sort().filter(k=>S.days[k].weight).map(k=>({k,w:S.days[k].weight}));
+  if(ws.length>=2){const dw=ws[ws.length-1].w-ws[0].w;$("kW").textContent=(dw>0?"+":"")+dw.toFixed(1);$("kWnote").textContent=`公斤（自 ${+ws[0].k.slice(5,7)}/${+ws[0].k.slice(8)}）`;}
+  else{$("kW").textContent=ws.length?ws[0].w.toFixed(1):"–";$("kWnote").textContent=ws.length?"公斤（目前）":"公斤，尚無資料";}
+  if(logged.length){$("avgEat").textContent=fmt(logged.reduce((s,x)=>s+x.eat,0)/logged.length)+" 大卡";$("avgDef").textContent=fmt(tot/logged.length)+" 大卡";
+    const mt={};logged.forEach(x=>S.days[x.k].foods.forEach(f=>{mt[f.meal]=(mt[f.meal]||0)+itemKcal(f);}));const top=Object.entries(mt).sort((a,b)=>b[1]-a[1])[0];
+    $("topMeal").textContent=top?`${MEALS.find(m=>m[0]===top[0])[1]}（平均 ${fmt(top[1]/logged.length)}）`:"–";}
+  else{$("avgEat").textContent="–";$("avgDef").textContent="–";$("topMeal").textContent="–";}
+  const W=340,H=190,L=44,R=8,T=12,B=28,ih=H-T-B,iw=W-L-R;
+  const mx=Math.max(500,...logged.map(x=>Math.abs(x.v)));const step=mx>1500?1000:mx>800?500:250;const top=Math.ceil(mx/step)*step;
+  const y=v=>T+ih/2-(v/top)*(ih/2);const bw=iw/7*0.56;
+  let s="";for(const t of [-top,-top/2,0,top/2,top]){s+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="${t===0?1.2:.6}" ${t===0?"":'stroke-dasharray="3 4"'}/><text x="${L-6}" y="${y(t)+4}" text-anchor="end">${t>0?"+":""}${fmt(t)}</text>`;}
+  vals.forEach((x,i)=>{const cx=L+iw/7*(i+.5);const lab=`${x.d.getMonth()+1}/${x.d.getDate()}`;
+    s+=`<text x="${cx}" y="${H-8}" text-anchor="middle">${lab}</text>`;
+    if(x.v==null){s+=`<circle cx="${cx}" cy="${y(0)}" r="2.5" fill="var(--line)"/>`;return;}
+    const y0=y(0),y1=y(x.v),hgt=Math.max(Math.abs(y1-y0),2);s+=`<rect x="${cx-bw/2}" y="${Math.min(y0,y1)}" width="${bw}" height="${hgt}" rx="4" fill="${x.v>=0?"var(--accent)":"var(--warn)"}"><title>${lab} ${x.v>=0?"赤字":"超標"} ${fmt(Math.abs(x.v))} 大卡</title></rect>`;});
+  $("barChart").innerHTML=s;
+  const since=new Date();since.setDate(since.getDate()-29);const sk=key(since);const pts=ws.filter(p=>p.k>=sk);
+  const WH=170,wb=26;let w="";
+  if(!pts.length){w=`<text x="170" y="85" text-anchor="middle">在「今日」分頁輸入體重後，這裡會出現趨勢線</text>`;}
+  else{const g=+S.profile.goal||null;const all=pts.map(p=>p.w).concat(g&&Math.abs(g-pts[pts.length-1].w)<6?[g]:[]);
+    const lo=Math.floor(Math.min(...all)-1),hi=Math.ceil(Math.max(...all)+1);
+    const yy=v=>T+(hi-v)/(hi-lo)*(WH-T-wb);const xx=k=>{const dd=(new Date(k+"T00:00")-new Date(sk+"T00:00"))/864e5;return L+dd/29*iw;};
+    for(const t of [lo,Math.round((lo+hi)/2),hi]){w+=`<line x1="${L}" x2="${W-R}" y1="${yy(t)}" y2="${yy(t)}" stroke="var(--line)" stroke-width=".6" stroke-dasharray="3 4"/><text x="${L-6}" y="${yy(t)+4}" text-anchor="end">${t}</text>`;}
+    const e=new Date();w+=`<text x="${L}" y="${WH-6}">${since.getMonth()+1}/${since.getDate()}</text><text x="${W-R}" y="${WH-6}" text-anchor="end">${e.getMonth()+1}/${e.getDate()}</text>`;
+    if(g&&g>=lo&&g<=hi)w+=`<line x1="${L}" x2="${W-R}" y1="${yy(g)}" y2="${yy(g)}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="6 4"/><text x="${L+4}" y="${yy(g)-5}" style="fill:var(--warn)">目標 ${g}</text>`;
+    const line=pts.map(p=>`${xx(p.k).toFixed(1)},${yy(p.w).toFixed(1)}`).join(" ");
+    if(pts.length>1)w+=`<polygon points="${xx(pts[0].k)},${WH-wb} ${line} ${xx(pts[pts.length-1].k)},${WH-wb}" fill="var(--accent-soft)" opacity=".7"/><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`;
+    pts.forEach((p,i)=>{const last=i===pts.length-1;w+=`<circle cx="${xx(p.k)}" cy="${yy(p.w)}" r="${last?4.5:2.5}" fill="${last?"var(--accent)":"var(--surface)"}" stroke="var(--accent)" stroke-width="1.5"><title>${p.k} ${p.w} 公斤</title></circle>`;});
+    const lp=pts[pts.length-1];w+=`<text x="${Math.min(Math.max(xx(lp.k),L+16),W-R-16)}" y="${yy(lp.w)-10}" text-anchor="middle" style="fill:var(--fg);font-weight:600">${lp.w}</text>`;}
+  $("wChart").innerHTML=w;
+}
+
+// ---------- 我的 ----------
+function fillProfile(){const p=S.profile;$("pAge").value=p.age;$("pH").value=p.h;$("pW").value=p.w;$("pAct").value=String(p.act);$("pGoal").value=p.goal||"";
+  [...$("sexSeg").children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===p.sex));[...$("defSeg").children].forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===+p.def));}
+function renderMe(){const p=S.profile,b=bmr(p),t=Math.round(b*p.act),target=Math.max(t-p.def,minIntake());
+  $("rBmr").textContent=fmt(b);$("rTdee").textContent=fmt(t);$("rTarget").textContent=fmt(target)+" 大卡";
+  const bmi=p.w/((p.h/100)**2);$("rBmi").textContent=bmi.toFixed(1)+(bmi<18.5?" 過輕":bmi<24?" 正常":bmi<27?" 過重":" 肥胖");
+  const real=t-target;
+  $("rGoal").textContent=p.goal&&p.goal<p.w&&real>0?`約 ${Math.ceil((p.w-p.goal)*7700/real/7)} 週`:"–";
+  const warn=$("rWarn");
+  if(bmi<18.5){warn.hidden=false;warn.textContent="目前 BMI 低於 18.5，不建議再製造熱量赤字。如有需要請先諮詢醫師或營養師。";}
+  else if(t-p.def<minIntake()){warn.hidden=false;warn.textContent=`目標赤字會讓攝取低於 ${fmt(minIntake())} 大卡（基礎代謝或最低建議量），已自動調整為 ${fmt(target)} 大卡，實際赤字約 ${fmt(real)} 大卡。`;}
+  else warn.hidden=true;}
+function readProfile(){const p=S.profile;const n=(id,lo,hi,d)=>{const v=parseFloat($(id).value);return v>=lo&&v<=hi?v:d;};
+  p.age=n("pAge",12,100,p.age);p.h=n("pH",100,230,p.h);p.w=n("pW",30,300,p.w);p.act=+$("pAct").value;const g=parseFloat($("pGoal").value);p.goal=g>=30&&g<=300?g:"";
+  save();renderAll();}
+["pAge","pH","pW","pGoal"].forEach(id=>$(id).addEventListener("change",readProfile));$("pAct").onchange=readProfile;
+$("sexSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.profile.sex=b.dataset.v;save();renderAll();};
+$("defSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.profile.def=+b.dataset.v;save();renderAll();};
+
+// ---------- 圖示 ----------
+let draft={...S.icon};
+let upImg=null;
+function drawIcon(cv,ic,size,img){const c=cv.getContext("2d");cv.width=size;cv.height=size;
+  c.fillStyle=ic.color;c.fillRect(0,0,size,size);
+  const im=img||null;
+  if(ic.img&&im&&im.complete&&im.naturalWidth){const s=Math.min(im.naturalWidth,im.naturalHeight);c.drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,size,size);return;}
+  const light=isLight(ic.color);const fg=light?"#18231E":"#FFFFFF";
+  if(ic.glyph==="ring"){const r=size*0.26,cx=size/2,cy=size/2;c.lineCap="round";c.lineWidth=size*0.085;
+    c.strokeStyle=light?"rgba(24,35,30,.18)":"rgba(255,255,255,.28)";c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.stroke();
+    c.strokeStyle=fg;c.beginPath();c.arc(cx,cy,r,-Math.PI/2,Math.PI*0.95);c.stroke();
+    c.fillStyle=fg;c.beginPath();c.arc(cx,cy,size*0.05,0,Math.PI*2);c.fill();return;}
+  c.fillStyle=fg;c.textAlign="center";c.textBaseline="middle";
+  const len=[...ic.glyph].length;const fs=size*(len<=1?0.56:len===2?0.4:0.3);
+  c.font=`900 ${fs}px "Noto Sans TC","Apple Color Emoji","Noto Color Emoji",sans-serif`;c.fillText(ic.glyph,size/2,size/2+size*0.03);}
+function isLight(hex){const n=parseInt(hex.slice(1),16);const r=n>>16,g=n>>8&255,b=n&255;return(r*299+g*587+b*114)/1000>170;}
+function iconURL(ic,size){const cv=document.createElement("canvas");drawIcon(cv,ic,size,ic.img?imgCache:null);return cv.toDataURL("image/png");}
+let imgCache=null;
+function withImg(src,cb){if(!src){imgCache=null;cb();return;}const im=new Image();im.onload=()=>{imgCache=im;cb();};im.onerror=()=>{imgCache=null;cb();};im.src=src;}
+function renderIconEditor(){
+  $("glyphs").innerHTML=GLYPHS.map(g=>`<button type="button" class="glyph" data-g="${g}" aria-pressed="${!draft.img&&draft.glyph===g}" aria-label="${g==="ring"?"圓環":g}">${g==="ring"?'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5a7 7 0 1 1-6.6 4.7"/></svg>':g}</button>`).join("");
+  $("swatches").innerHTML=COLORS.map(c=>`<button type="button" class="sw" data-c="${c}" style="background:${c}" aria-pressed="${draft.color===c}" aria-label="背景顏色 ${c}"></button>`).join("")+
+    `<label class="sw" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);display:block;position:relative" aria-label="自訂顏色"><input type="color" id="colorPick" value="${draft.color}" style="opacity:0;position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;cursor:pointer"></label>`;
+  $("colorPick").oninput=e=>{draft.color=e.target.value;preview();};
+  preview();}
+function preview(){drawIcon($("iconPreview"),draft,176,draft.img?upImg:null);[...$("swatches").querySelectorAll(".sw[data-c]")].forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===draft.color));}
+$("glyphs").onclick=e=>{const b=e.target.closest("[data-g]");if(!b)return;draft.glyph=b.dataset.g;draft.img="";$("customGlyph").value="";renderIconEditor();};
+$("swatches").onclick=e=>{const b=e.target.closest("[data-c]");if(!b)return;draft.color=b.dataset.c;preview();};
+$("customGlyph").oninput=e=>{const v=e.target.value.trim();if(v){draft.glyph=v;draft.img="";renderIconEditor();}};
+$("iconUpload").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+    const cv=document.createElement("canvas");cv.width=cv.height=512;const c=cv.getContext("2d");const s=Math.min(im.naturalWidth,im.naturalHeight);
+    c.drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,512,512);draft.img=cv.toDataURL("image/jpeg",0.85);
+    const im2=new Image();im2.onload=()=>{upImg=im2;renderIconEditor();};im2.src=draft.img;};im.onerror=()=>toast("無法讀取這張圖片，請換一張");im.src=r.result;};r.readAsDataURL(f);e.target.value="";};
+$("appName").oninput=e=>{draft.name=e.target.value.trim()||"赤字日記";};
+$("iconSave").onclick=()=>{S.icon={...draft};save();withImg(S.icon.img,()=>{applyIcon();toast("圖示已套用，現在可以加到主畫面");});};
+
+// ---------- PWA / 加到主畫面 ----------
+let manifestURL=null;
+function applyIcon(){
+  const ic=S.icon;const u192=iconURL(ic,192),u512=iconURL(ic,512);
+  $("faviconLink").href=u192;$("brandIcon").src=u192;$("appTitle").textContent=ic.name;document.title=ic.name;
+  const base=location.href.split("#")[0].split("?")[0];const scope=base.slice(0,base.lastIndexOf("/")+1);
+  const m={name:ic.name,short_name:ic.name.slice(0,12),id:base,start_url:base,scope,display:"standalone",orientation:"portrait",
+    background_color:"#F3F6F2",theme_color:isLight(ic.color)?"#0E7A5A":ic.color,lang:"zh-TW",
+    icons:[{src:u192,sizes:"192x192",type:"image/png",purpose:"any"},{src:u512,sizes:"512x512",type:"image/png",purpose:"any"},{src:u512,sizes:"512x512",type:"image/png",purpose:"maskable"}]};
+  if(manifestURL)URL.revokeObjectURL(manifestURL);
+  manifestURL=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:"application/manifest+json"}));
+  $("manifestLink").href=manifestURL;
+  document.querySelector('meta[name="theme-color"]').content=m.theme_color;
+}
+let deferred=null;
+const standalone=()=>matchMedia("(display-mode: standalone)").matches;
+function updateHomeBtn(){$("homeBtn").hidden=standalone();}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;});
+window.addEventListener("appinstalled",()=>{deferred=null;toast("已加到主畫面");updateHomeBtn();});
+$("homeBtn").onclick=async()=>{
+  if(deferred){const d=deferred;deferred=null;d.prompt();try{const r=await d.userChoice;if(r.outcome!=="accepted")toast("已取消");}catch(e){}return;}
+  if(location.protocol!=="https:"&&location.hostname!=="localhost"){toast("需要用 https 網址開啟才能加到主畫面");return;}
+  toast("Chrome 還在準備，請過幾秒再點一次");
+};
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+
+// ---------- 備份 ----------
+$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(S)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`赤字日記備份-${key(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("備份已下載");};
+$("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result);if(!p||!p.profile||!p.days)throw 0;
+  S={...JSON.parse(JSON.stringify(DEF)),...p,icon:{...DEF.icon,...(p.icon||{})}};save();draft={...S.icon};withImg(S.icon.img,()=>{upImg=imgCache;applyIcon();renderIconEditor();});renderAll();toast(`已匯入 ${Object.keys(S.days).length} 天的記錄`);}
+  catch(err){toast("這不是赤字日記的備份檔");}};r.readAsText(f);e.target.value="";};
+$("clearBtn").onclick=()=>{$("clearConfirm").hidden=false;$("clearBtn").hidden=true;};
+$("clearNo").onclick=()=>{$("clearConfirm").hidden=true;$("clearBtn").hidden=false;};
+$("clearYes").onclick=()=>{S.days={};S.recent=[];save();$("clearNo").onclick();renderAll();toast("所有記錄已刪除");};
+
+// ---------- 分頁 ----------
+const TABS=["today","log","stats","me"];
+function route(){let t=location.hash.slice(1);if(!TABS.includes(t))t="today";
+  TABS.forEach(x=>{$("v-"+x).hidden=x!==t;});
+  document.querySelectorAll("nav.tabs a").forEach(a=>{if(a.dataset.tab===t)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
+  if(t==="log"){const k=key(cur);$("logDateNote").textContent=`記錄到：${k===key(new Date())?"今天":`${cur.getMonth()+1}/${cur.getDate()}`}（可在「今日」分頁切換日期）`;renderRecent();exPrev();}
+  window.scrollTo(0,0);}
+window.addEventListener("hashchange",route);
+
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2400);}
+function renderAll(){renderToday();renderResults();renderStats();fillProfile();renderMe();renderRecent();}
+
+$("appName").value=S.icon.name;
+withImg(S.icon.img,()=>{upImg=imgCache;applyIcon();renderIconEditor();});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{withImg(S.icon.img,()=>{applyIcon();preview();});});
+renderAll();route();updateHomeBtn();
+})();
+</script>
+</body>
+</html>
